@@ -10,7 +10,7 @@ After I get this code working I hope to merge with the RSophia package or Releas
     install.packages("devtools")
     library(devtools)
     dev_mode(on=T)
-    install_github("ggplot2")
+    install_github("RSofia-Sparse", username = "jofusa")
 
 
 John Dennison - March 2013
