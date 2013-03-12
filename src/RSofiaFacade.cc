@@ -222,85 +222,6 @@ std::map<std::string, SEXP> RSofiaFacade::train_fit (
 
 }
 
-
-std::map<std::string, SEXP> RSofiaFacade::train_fit_sparse (
-      const Rcpp::NumericVector& rowItems
-    , const Rcpp::NumericVector& colItems
-    , const Rcpp::NumericVector& y
-    , const long int random_seed
-    , const float lambda
-    , const long int iterations
-    , const string& learner
-    , const string& eta
-    , const string& loop
-    , const float rank_step_probability
-    , const float passive_aggressive_c
-    , const float passive_aggressive_lambda 
-    , const float perceptron_margin_size
-    , const bool training_objective 
-    , const int dimensionality
-    , const int hash_mask_bits
-    , const bool no_bias_term
-    , const bool verbose
-    , const int reserve
-) 
-
-{
-  /***  
-  if(reserve == 0)  {
-    SfDataSet training_data(!no_bias_term);
-  } else {
-    SfDataSet training_data(!no_bias_term, reserve);
-  }***/
-    
-  SfDataSet training_data(!no_bias_term, reserve);
-
-  std::stringstream out_stream;
-  
-  //read data into training data
- 
-  clock_t t1 = std::clock();
- 
-  for(int i = 0; i < x.nrow(); ++i) {
-    out_stream << y[i];
-    for(int j = 0; j < x.ncol(); ++j) { 
-      if(x(i,j) != 0) {
-        out_stream << " " << (j + 1) << ":" << x(i,j);
-      }
-    }
-    training_data.AddVector(out_stream.str().c_str());
-    out_stream.str("");        
-  }
-
-  clock_t t2 = std::clock();
-
-  float io_time = (t2 - t1)/(float)CLOCKS_PER_SEC;
-
-  std::map<std::string, SEXP> rs = internal_train(
-    training_data
-    , random_seed
-    , lambda
-    , iterations
-    , learner
-    , eta
-    , loop
-    , rank_step_probability
-    , passive_aggressive_c
-    , passive_aggressive_lambda
-    , perceptron_margin_size
-    , training_objective
-    , dimensionality
-    , hash_mask_bits
-    , no_bias_term
-    , verbose
-  );
-
-  rs["io_time"] = Rcpp::wrap(io_time);
-  return rs;
-
-}
-
-
  
 std::vector<float> RSofiaFacade::predict(
   const Rcpp::NumericVector& weights, 
@@ -479,7 +400,6 @@ RCPP_MODULE(sofia) {
   
   .method("train_filename", &RSofiaFacade::train_filename) 
   .method("train_fit",  &RSofiaFacade::train_fit)
-  .method("train_fit_sparse",  &RSofiaFacade::train_fit_sparse)
   .method("predict", &RSofiaFacade::predict)
    ;
 

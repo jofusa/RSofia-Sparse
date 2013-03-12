@@ -74,28 +74,6 @@ class RSofiaFacade {
       , const int reserve
     );
     
-    std::map<std::string, SEXP> RSofiaFacade::train_fit_sparse (
-      const Rcpp::NumericVector& rowItems
-    , const Rcpp::NumericVector& colItems
-    , const Rcpp::NumericVector& y
-    , const long int random_seed
-    , const float lambda
-    , const long int iterations
-    , const string& learner
-    , const string& eta
-    , const string& loop
-    , const float rank_step_probability
-    , const float passive_aggressive_c
-    , const float passive_aggressive_lambda 
-    , const float perceptron_margin_size
-    , const bool training_objective 
-    , const int dimensionality
-    , const int hash_mask_bits
-    , const bool no_bias_term
-    , const bool verbose
-    , const int reserve
-    );
-    
     std::vector<float> predict(
         const Rcpp::NumericVector& weights
       , const Rcpp::NumericMatrix& newdata
