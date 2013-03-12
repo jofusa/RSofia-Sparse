@@ -1,0 +1,4 @@
+useDynLib(RSofia)
+exportPattern("^[[:alpha:]]+")
+import( Rcpp )
+import( arules )
