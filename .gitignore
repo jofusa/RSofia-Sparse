@@ -1,0 +1,22 @@
+*.[oa]
+nbproject
+src/nbproject
+src-i386
+src-x86_64
+.project
+.cproject
+/.Rd2dvi69056/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
