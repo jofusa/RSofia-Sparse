@@ -224,8 +224,8 @@ std::map<std::string, SEXP> RSofiaFacade::train_fit (
 
 
 std::map<std::string, SEXP> RSofiaFacade::train_fit_sparse (
-      const Rcpp::NumericVector& rowItems
-    , const Rcpp::NumericVector& colItems
+       const Rcpp::NumericVector& colItems
+    ,  const Rcpp::NumericVector& rowItems
     , const Rcpp::NumericVector& y
     , const long int random_seed
     , const float lambda
@@ -260,41 +260,50 @@ std::map<std::string, SEXP> RSofiaFacade::train_fit_sparse (
   //read data into training data
  
   clock_t t1 = std::clock();
-  // the arules transactions class is a direct extension of the itemMatrix class   (specifically ngCMatrix)
-  // from the Matrix package
-  // the data is in a  compressed column-oriented form. storing in 
+
+
+/*
+   the arules transactions class is a direct extension of the itemMatrix class   (specifically ngCMatrix) from the Matrix package
+   the data is in a compressed column-oriented form. 
+
+   from the matrix documentation
+   p:
+       Object of class "integer" of pointers, one for each column (row), to the initial (zero-based) index of elements in the column. Present in compressed column-oriented and compressed row-oriented forms only.
+
+    i:
+       Object of class "integer" of length nnzero (number of non-zero elements). These are the row numbers for each TRUE element in the matrix. All other elements are FALSE. Present in triplet and compressed column-oriented forms only.
+
+   in this implementation we are going to loop over the col entries and then list out every none zero entity.  
+
+rowItems -> p
+colItems -> i
+*/
+
+  int n = rowItems.size();
   int start = 0;
   int end = 0;
   int range = 0;
   int position = 0;
-  for(int i = 0; i < colItems.size(); i++){
-    range = colItems[i] - end;
+  for(int i = 1; i < n; i++){
+    range = rowItems[i] - end;
     //Write the target response, first thing in the row
-    out_stream << target[i] << " ";
-    
+    out_stream << y[i-1] << " ";
+
     for(int j = 0; j < range; j++){
-      //Write item number to 
-      out_stream << rowItems[position] +1 << ":1 ";
+      //Write item number 
+      out_stream << colItems[position] +1 << ":1 ";
       position = position + 1;
+
     }
+    //Load new vector
+
+    training_data.AddVector(out_stream.str().c_str());
+
     //Start a new line
     out_stream.str("");        
-    end = colItems[i] ;
+    end = rowItems[i] ;
   }
 
-
-
-
-  for(int i = 0; i < x.nrow(); ++i) {
-    out_stream << y[i];
-    for(int j = 0; j < x.ncol(); ++j) { 
-      if(x(i,j) != 0) {
-        out_stream << " " << (j + 1) << ":" << x(i,j);
-      }
-    }
-    training_data.AddVector(out_stream.str().c_str());
-    out_stream.str("");        
-  }
 
   clock_t t2 = std::clock();
 
@@ -377,6 +386,75 @@ std::vector<float> RSofiaFacade::predict(
   return(predictions);
 
 }
+
+
+std::vector<float> RSofiaFacade::predict_sparse(
+  const Rcpp::NumericVector& weights, 
+  const Rcpp::NumericVector& colItems,
+  const Rcpp::NumericVector& rowItems,
+  const bool no_bias_term,
+  const std::string & prediction_type) 
+
+{
+    // Import data into a SfDataSet structure
+  SfDataSet test_data = SfDataSet(!no_bias_term);
+  
+   // pre-increment is better
+
+  std::stringstream out_stream;
+     
+     
+  int n = rowItems.size();
+  int start = 0;
+  int end = 0;
+  int range = 0;
+  int position = 0;
+  for(int i = 1; i < n; i++){
+    range = rowItems[i] - end;
+    //Write the a fake target response, first thing in the row
+    out_stream << 0 << " ";
+
+    for(int j = 0; j < range; j++){
+      //Write item number 
+      out_stream << colItems[position] +1 << ":1 ";
+      position = position + 1;
+
+    }
+    //Load new vector
+
+    test_data.AddVector(out_stream.str().c_str());
+
+    //Start a new line
+    out_stream.str("");        
+    end = rowItems[i] ;
+  }
+    
+  std::stringstream in_stream;
+
+  for(int i = 0; i < weights.length(); ++i)
+    in_stream << weights[i] << " ";
+    
+  SfWeightVector* w = new SfWeightVector(in_stream.str());    
+    
+  std::vector<float> predictions;
+    
+  if (prediction_type == "linear")
+    sofia_ml::SvmPredictionsOnTestSet(test_data, *w, &predictions);
+  else if (prediction_type == "logistic")
+    sofia_ml::LogisticPredictionsOnTestSet(test_data, *w, &predictions);
+  else {
+    //std::cerr << "prediction " << prediction_type << " not supported.";
+    //no exit called though
+    error("prediction %s not supported", prediction_type.c_str());
+  }
+   
+  delete w;
+
+  return(predictions);
+
+}
+
+
 
 //private methods
 
@@ -469,7 +547,7 @@ void RSofiaFacade::run_outer_loop(SfWeightVector * w
   else if (loop=="roc")
     sofia_ml::StochasticRocLoop(
         training_data, learner_type, eta_type, lambda_val, c, iterations, w
-    );			     
+    );  		     
   else if (loop=="rank")
     sofia_ml::StochasticRankLoop(
         training_data, learner_type, eta_type, lambda_val, c, iterations, w
@@ -505,6 +583,7 @@ RCPP_MODULE(sofia) {
   .method("train_fit",  &RSofiaFacade::train_fit)
   .method("train_fit_sparse",  &RSofiaFacade::train_fit_sparse)
   .method("predict", &RSofiaFacade::predict)
+  .method("predict_sparse", &RSofiaFacade::predict_sparse)
    ;
 
 }
