@@ -74,7 +74,7 @@ class RSofiaFacade {
       , const int reserve
     );
     
-    std::map<std::string, SEXP> RSofiaFacade::train_fit_sparse (
+    std::map<std::string, SEXP> train_fit_sparse (
       const Rcpp::NumericVector& rowItems
     , const Rcpp::NumericVector& colItems
     , const Rcpp::NumericVector& y
@@ -102,6 +102,15 @@ class RSofiaFacade {
       , const bool no_bias_term
       , const std::string& prediction_type
     );
+
+    std::vector<float> predict_sparse(
+        const Rcpp::NumericVector& weights
+      , const Rcpp::NumericVector& colItems
+      , const Rcpp::NumericVector& rowItems
+      , const bool no_bias_term
+      , const std::string& prediction_type
+    );
+
 
   private:
     //these are to eliminate duplicate code
