@@ -2,6 +2,96 @@ sofia <- function(x, ...) {
   UseMethod("sofia")
 }
 
+sofia.itemMatrix <- function(x
+                      , y
+                      , random_seed = floor(runif(1, 1, 65535))
+                      , lambda = 0.1 
+                      , iterations = 100000
+                      , learner_type = "pegasos"
+                      , eta_type = "pegasos"
+                      , loop_type = "stochastic"
+                      , rank_step_probability = 0.5
+                      , passive_aggressive_c = 10000000.0
+                      , passive_aggressive_lambda = 0
+                      , perceptron_margin_size = 1.0
+                      , training_objective = FALSE
+                      , no_bias_term = FALSE
+                      , dimensionality = ncol(x) + 1
+                      , hash_mask_bits = 0
+                      , verbose = FALSE
+                      , reserve = 0 
+                      , ...
+) {
+  
+  ###
+  # break on bad parameter
+  ###
+  
+  sofia_facade <- new(RSofiaFacade)
+  
+  sofia_resultset <- sofia_facade$train_fit_sparse(x@data@i 
+                                            , x@data@p
+                                            , y
+                                            , random_seed 
+                                            , lambda 
+                                            , iterations
+                                            , learner_type 
+                                            , eta_type
+                                            , loop_type
+                                            , rank_step_probability
+                                            , passive_aggressive_c
+                                            , passive_aggressive_lambda
+                                            , perceptron_margin_size
+                                            , training_objective
+                                            , dimensionality
+                                            , hash_mask_bits
+                                            , no_bias_term
+                                            , verbose
+                                            , reserve
+  )
+  
+  weights        <- sofia_resultset$weights
+  
+  
+  if (nrow(x@itemInfo['labels']) == 0) {
+    colnames_ <- as.character(seq_len(ncol(x)))
+  } else {
+    colnames_ <- x@itemInfo['labels'][,]
+  }                 
+  
+  names(weights) <- c("(Offset)", colnames_) 
+  
+  training_time <- sofia_resultset$training_time 
+  io_time       <- sofia_resultset$io_time
+  
+  obj <- list(
+    par = list(random_seed=random_seed
+               , lambda=lambda
+               , iterations=iterations
+               , learner_type=learner_type
+               , eta_type=eta_type
+               , loop_type=loop_type
+               , rank_step_probability=rank_step_probability
+               , passive_aggressive_c=passive_aggressive_c
+               , passive_aggressive_lambda=passive_aggressive_lambda
+               , perceptron_margin_size=perceptron_margin_size
+               , training_objective=training_objective
+               , dimensionality=dimensionality
+               , hash_mask_bits=hash_mask_bits
+               , no_bias_term=no_bias_term
+    ),
+    weights = weights
+    , training_time = training_time
+    , io_time = io_time
+  )
+  
+  class(obj) <- "sofia"
+  
+  return (obj)
+  
+}
+
+
 sofia.formula <- function(x, data
   , random_seed = floor(runif(1, 1, 65535))
   , lambda = 0.1 
@@ -34,7 +124,7 @@ sofia.formula <- function(x, data
 
   if(class(x) != "formula")
     stop("x must be a formula")
-  if(!is.data.frame(data) || is(data, "transactions"))
+  if(!is.data.frame(data))
     stop("data must be a dataframe")
   if(!(is.numeric(random_seed) && length(random_seed) == 1))
     stop("random_seed must be a numeric scalar")
