@@ -27,7 +27,12 @@
 #include "sf-weight-vector.h"
 #include "sofia-ml-methods.h"
 #include "sf-hash-weight-vector.h"
-#include<ctime>
+#include <ctime>
+
+//Clustering
+#include "sf-cluster-centers.h"
+#include "sf-kmeans-methods.h"
+
 
 class RSofiaFacade {
 
@@ -110,6 +115,31 @@ class RSofiaFacade {
       , const bool no_bias_term
       , const std::string& prediction_type
     );
+    
+    //Cluster stuffs!!
+    
+    std::map<std::string, SEXP> train_kmeans_matrix (
+      const Rcpp::NumericMatrix& x
+    , const Rcpp::NumericVector& y
+    , const int k
+    , const long int random_seed
+    , const int dimensionality
+    , const bool no_bias_term
+    , const int reserve
+  );
+  
+      std::map<std::string, SEXP> train_kmeans_dataframe (
+      const Rcpp::DataFrame& x
+    , const Rcpp::NumericVector& y
+    , const long int random_seed
+    , const int dimensionality
+  );
+  
+  
+    std::map<std::string, SEXP> train_kmeans_test (
+    
+  );
+    
 
 
   private:
@@ -157,6 +187,9 @@ class RSofiaFacade {
       , const bool verbose //do we use this
     );
 
+    void InitializeCenters(const SfDataSet& data_set
+                  	       , SfClusterCenters* cluster_centers
+                           , int k);
  
 };
 

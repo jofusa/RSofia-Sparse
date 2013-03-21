@@ -534,6 +534,19 @@ namespace sofia_ml {
       return false;
     }
   }
+  
+  bool SingleWinnowStep(const SfSparseVector& x,
+  			  float eta,
+				  float c,
+				  SfWeightVector* w) {
+    if (x.GetY() * w->InnerProduct(x) <= c) {
+      w->AddVector(x, eta * x.GetY());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
 
   bool SinglePegasosLogRegStep(const SfSparseVector& x,
 			       float eta,

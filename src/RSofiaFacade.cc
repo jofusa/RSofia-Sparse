@@ -17,10 +17,14 @@
 //
 // Authors: Mike King <wmichaelking1@gmail.com>
 //          Fernando Cela-Diaz <fcela@sloan.mit.edu>
+//
+// Kmeans/Sparse Data Support by John Dennison <dennison.john@gmail.com>
+ 
 
 #include "R.h"
 #include "Rcpp.h"
 #include "RSofiaFacade.h"
+
 
 std::map<std::string, SEXP> RSofiaFacade::internal_train (
   const SfDataSet & training_data
@@ -190,6 +194,8 @@ std::map<std::string, SEXP> RSofiaFacade::train_fit (
         out_stream << " " << (j + 1) << ":" << x(i,j);
       }
     }
+    Rcpp::Rcout << "Test: " << out_stream.str().c_str()<<  std::endl;
+
     training_data.AddVector(out_stream.str().c_str());
     out_stream.str("");        
   }
@@ -458,6 +464,53 @@ std::vector<float> RSofiaFacade::predict_sparse(
 
 //private methods
 
+//Private Cluster Methods
+
+
+void InitializeCenters(const SfDataSet& data_set,
+  	       SfClusterCenters* cluster_centers, int k) {
+             
+  //assert(cluster_centers != NULL);
+  clock_t initialize_start = clock();
+  
+//  if (CMD_LINE_STRINGS["--init_type"] == "random") {
+//    sofia_cluster::InitializeWithKRandomCenters(k,
+//						data_set,
+//						cluster_centers);
+/*  } else if (CMD_LINE_STRINGS["--init_type"] == "kmeans_pp") {
+    sofia_cluster::ClassicKmeansPlusPlus(CMD_LINE_INTS["--k"],
+					 data_set,
+					 cluster_centers);
+  } else if (CMD_LINE_STRINGS["--init_type"] == "optimized_kmeans_pp") {
+    sofia_cluster::OptimizedKmeansPlusPlus(CMD_LINE_INTS["--k"],
+					   data_set,
+					   cluster_centers);
+  } else if (CMD_LINE_STRINGS["--init_type"] == "optimized_kmeans_pp_ti") {
+    sofia_cluster::OptimizedKmeansPlusPlusTI(CMD_LINE_INTS["--k"],
+					   data_set,
+					   cluster_centers);
+  } else if (CMD_LINE_STRINGS["--init_type"] == "sampling_kmeans_pp") {
+    sofia_cluster::SamplingKmeansPlusPlus(CMD_LINE_INTS["--k"],
+					  CMD_LINE_INTS["--sample_size"],
+					  data_set,
+					  cluster_centers);
+  } else if (CMD_LINE_STRINGS["--init_type"] == "sampling_farthest") {
+    sofia_cluster::SamplingFarthestFirst(CMD_LINE_INTS["--k"],
+					 CMD_LINE_INTS["--sample_size"],
+					 data_set,
+					 cluster_centers);
+  } else { 
+    std::cerr << "--init_type " << CMD_LINE_STRINGS["--init_type"]
+	      << " not supported." << std::endl;
+    exit(0);
+  }
+
+*/
+  //PrintElapsedTime(initialize_start, "Time to initialize cluster centers: ");
+}
+
+
+
 SfWeightVector * RSofiaFacade::alloc_SfWeightVector(int dimensionality, int hash_mask_bits) {
 
   SfWeightVector* w  = NULL;
@@ -572,6 +625,176 @@ void RSofiaFacade::run_outer_loop(SfWeightVector * w
 }
 
 
+//Adding Kmeans functions
+
+
+//Public Methods
+
+  std::map<std::string, SEXP> RSofiaFacade::train_kmeans_test (
+    
+  ){
+    
+  std::map<std::string, SEXP> rs;
+  clock_t train_start = std::clock();
+   
+  clock_t train_end = std::clock();
+  float time_elapsed = (train_end - train_start) / (float)CLOCKS_PER_SEC;
+
+  rs["training_time"] = Rcpp::wrap(time_elapsed); 
+
+  return(rs);
+      
+    
+  }
+
+
+std::map<std::string, SEXP> RSofiaFacade::train_kmeans_matrix (
+      const Rcpp::NumericMatrix& x
+    , const Rcpp::NumericVector& y
+    , const int k
+    , const long int random_seed
+    , const int dimensionality
+    , const bool no_bias_term
+    , const int reserve
+  )
+  {
+    
+    
+      std::map<std::string, SEXP> rs;
+
+      clock_t train_start = std::clock();
+  // Train model, if needed.
+  
+    SfClusterCenters* cluster_centers =  new SfClusterCenters(dimensionality);
+  
+  
+  //Read stuffs
+    SfDataSet training_data(!no_bias_term, reserve);
+    std::stringstream out_stream;
+  
+ clock_t t1 = std::clock();
+
+  for(int i = 0; i < x.nrow(); ++i) {
+    out_stream << "1";
+    for(int j = 0; j < x.ncol(); ++j) { 
+      if(x(i,j) != 0) {
+        out_stream << " " << (j + 1) << ":" << x(i,j);
+      }
+    }
+    Rcpp::Rcout << "Test: " << out_stream.str().c_str()<<  std::endl;
+
+    training_data.AddVector(out_stream.str().c_str());
+
+    out_stream.str("");        
+  }
+
+  clock_t t2 = std::clock();
+
+  float io_time = (t2 - t1)/(float)CLOCKS_PER_SEC;  
+  
+  sofia_cluster::InitializeWithKRandomCenters(k,
+  					training_data,
+						cluster_centers);
+
+float objective_value = sofia_cluster::KmeansObjective(training_data, *cluster_centers); 
+
+
+   Rcpp::Rcout << "Objective function value for " << "Training" << ": " 
+        <<  objective_value << std::endl;
+sofia_cluster::BatchKmeans(100000,
+                   training_data,
+                   cluster_centers,
+                   -1.0,
+                   0.0);
+                   
+ float objective_value2 = sofia_cluster::KmeansObjective(training_data, *cluster_centers); 
+
+
+std::stringstream model_stream;
+   model_stream << cluster_centers->AsString();
+
+Rcpp::Rcout << "Test: " << model_stream.str().c_str()<<  std::endl;
+
+   Rcpp::Rcout << "Objective function value for " << "Training" << ": " 
+        <<  objective_value2 << std::endl;
+
+  
+ // InitializeCenters(training_data, cluster_centers, k);
+  /*  if (CMD_LINE_BOOLS["--objective_after_init"]) {
+      ComputeObjective(*training_data, *cluster_centers, "initialization");
+    }
+
+    OptimizeCenters(*training_data, cluster_centers);
+    if (CMD_LINE_BOOLS["--objective_after_training"]) {
+      ComputeObjective(*training_data, *cluster_centers, "training");
+    }
+  }    
+*/
+
+
+
+  clock_t train_end = std::clock();
+  float time_elapsed = (train_end - train_start) / (float)CLOCKS_PER_SEC;
+
+
+  rs["training_time"] = Rcpp::wrap(time_elapsed); 
+
+  return(rs);
+    
+
+  }
+
+
+std::map<std::string, SEXP> RSofiaFacade::train_kmeans_dataframe (
+      const Rcpp::DataFrame& x
+    , const Rcpp::NumericVector& y
+    , const long int random_seed
+    , const int dimensionality
+  )
+  {
+    
+    
+      std::map<std::string, SEXP> rs;
+
+      clock_t train_start = std::clock();
+  // Train model, if needed.
+/*  
+    sofia_kmeans::SfClusterCenters* cluster_centers =
+    new SfClusterCenters(dimensionality);
+  
+
+    if (!CMD_LINE_STRINGS["--training_file"].empty()) {
+    SfDataSet* training_data = NewDataSet(CMD_LINE_STRINGS["--training_file"]);
+
+    InitializeCenters(*training_data, cluster_centers);
+    if (CMD_LINE_BOOLS["--objective_after_init"]) {
+      ComputeObjective(*training_data, *cluster_centers, "initialization");
+    }
+
+    OptimizeCenters(*training_data, cluster_centers);
+    if (CMD_LINE_BOOLS["--objective_after_training"]) {
+      ComputeObjective(*training_data, *cluster_centers, "training");
+    }
+  }    
+*/
+
+
+
+  clock_t train_end = std::clock();
+  float time_elapsed = (train_end - train_start) / (float)CLOCKS_PER_SEC;
+
+
+  rs["training_time"] = Rcpp::wrap(time_elapsed); 
+
+  return(rs);
+    
+
+  }
+
+
+
+
+
 RCPP_MODULE(sofia) {
    using namespace Rcpp ;
 
@@ -584,6 +807,9 @@ RCPP_MODULE(sofia) {
   .method("train_fit_sparse",  &RSofiaFacade::train_fit_sparse)
   .method("predict", &RSofiaFacade::predict)
   .method("predict_sparse", &RSofiaFacade::predict_sparse)
+  .method("train_kmeans_matrix", &RSofiaFacade::train_kmeans_matrix)
+  .method("train_kmeans_dataframe", &RSofiaFacade::train_kmeans_dataframe)
+  .method("train_kmeans_test", &RSofiaFacade::train_kmeans_test)
    ;
 
 }
