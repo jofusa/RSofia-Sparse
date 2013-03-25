@@ -32,6 +32,9 @@
 #include "sf-sparse-vector.h"
 #include "sf-weight-vector.h"
 
+#include "R.h"
+#include "Rcpp.h"
+
 using std::string;
 
 enum ClusterCenterMappingType {
@@ -100,6 +103,8 @@ class SfClusterCenters {
   // Returns a string representation of this object, with one
   // string-reresented SfWeightVector per line.
   string AsString();
+  
+  Rcpp::NumericMatrix RExport();
   
   // Empties the set of cluster centers.
   void Clear() { cluster_centers_.clear(); }

@@ -126,11 +126,14 @@ string SfClusterCenters::AsString() {
   return output_string;
 }
 
-Rcpp::NumericVector SfClusterCenters::RExport() {
-  Rcpp::NumericVector out;
-  for (unsigned int i = 0; i < cluster_centers_.size(); ++i) {
-    output_string += cluster_centers_[i].AsString();
-    output_string += "\n";
+Rcpp::NumericMatrix SfClusterCenters::RExport() {
+  Rcpp::NumericMatrix out(cluster_centers_.size(), dimensionality_ -1 );
+  
+  Rcpp::Rcout<< "dim:" << dimensionality_  << " " << cluster_centers_.size() <<std::endl;
+  for (int i = 0; i < cluster_centers_.size(); ++i) {
+      for (int j = 0; j < dimensionality_ -1; ++j) {//We do not export the bias term center
+        out(i, j) = cluster_centers_[i].ValueOf( j + 1 ); //Skip bais term
+      }
   }
   return out;
 }

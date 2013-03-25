@@ -681,8 +681,6 @@ std::map<std::string, SEXP> RSofiaFacade::train_kmeans_matrix (
         out_stream << " " << (j + 1) << ":" << x(i,j);
       }
     }
-    Rcpp::Rcout << "Test: " << out_stream.str().c_str()<<  std::endl;
-
     training_data.AddVector(out_stream.str().c_str());
 
     out_stream.str("");        
@@ -696,18 +694,18 @@ std::map<std::string, SEXP> RSofiaFacade::train_kmeans_matrix (
   					training_data,
 						cluster_centers);
 
-float objective_value = sofia_cluster::KmeansObjective(training_data, *cluster_centers); 
+   float objective_value = sofia_cluster::KmeansObjective(training_data, *cluster_centers); 
 
 
    Rcpp::Rcout << "Objective function value for " << "Training" << ": " 
         <<  objective_value << std::endl;
-sofia_cluster::BatchKmeans(100000,
+   sofia_cluster::BatchKmeans(100000,
                    training_data,
                    cluster_centers,
                    -1.0,
                    0.0);
                    
- float objective_value2 = sofia_cluster::KmeansObjective(training_data, *cluster_centers); 
+   float objective_value2 = sofia_cluster::KmeansObjective(training_data, *cluster_centers); 
 
 
 std::stringstream model_stream;
@@ -715,9 +713,13 @@ std::stringstream model_stream;
 
 Rcpp::Rcout << "Test: " << model_stream.str().c_str()<<  std::endl;
 
-   Rcpp::Rcout << "Objective function value for " << "Training" << ": " 
-        <<  objective_value2 << std::endl;
-
+Rcpp::NumericVector classification(training_data.NumExamples());
+      for (int i = 0; i < training_data.NumExamples(); ++i) {
+  int closest_center;
+	cluster_centers->SqDistanceToClosestCenter(training_data.VectorAt(i),
+						   &closest_center);
+  classification[i] = closest_center + 1; //Zero indexed in Cpp, 1 indexed in R
+      }
   
  // InitializeCenters(training_data, cluster_centers, k);
   /*  if (CMD_LINE_BOOLS["--objective_after_init"]) {
@@ -736,7 +738,8 @@ Rcpp::Rcout << "Test: " << model_stream.str().c_str()<<  std::endl;
   clock_t train_end = std::clock();
   float time_elapsed = (train_end - train_start) / (float)CLOCKS_PER_SEC;
 
-
+  rs["model"] = Rcpp::wrap(cluster_centers->RExport());
+  rs["classification"] = Rcpp::wrap(classification);
   rs["training_time"] = Rcpp::wrap(time_elapsed); 
 
   return(rs);
